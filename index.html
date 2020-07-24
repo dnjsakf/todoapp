@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hello React!</title>
+    <script src="https://unpkg.com/react@^16/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@16.13.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+    <style type="text/css">
+      * { box-sizing: border-box; }
+    
+      .todo-list { width: 100%; padding: unset; }
+
+      .todo-list > .todo-item { padding: 5px 8px; margin-bottom: 2px; }
+      .todo-list > .todo-item:last-child(){ margin-bottom: unset; }
+      
+      .todo-item-input { background-color: transparent; border: none; }
+      .todo-item-input:focus { background-color: white; border: 1px solid darkgrey; }
+    
+      .w1 { display: inline-block; width: 8.3% }
+      .w2 { display: inline-block; width: 16.6% }
+      .w3 { display: inline-block; width: 25% }
+      .w4 { display: inline-block; width: 33.3% }
+      .w5 { display: inline-block; width: 41.6% }
+      .w6 { display: inline-block; width: 50% }
+      .w7 { display: inline-block; width: 58.3% }
+      .w8 { display: inline-block; width: 66.6% }
+      .w9 { display: inline-block; width: 75% }
+      .w10 { display: inline-block; width: 83.3% }
+      .w11 { display: inline-block; width: 91.6% }
+      .w12 { display: inline-block; width: 100% }
+      
+      .left { text-align: left; }
+      .right { text-align: right; }
+      .center { text-align: center; }
+      
+      .ready { background-color: lightgrey; }
+      .progressing { background-color: lightgreen; }
+      .finish { background-color: skyblue; }
+      .give-up { background-color: orange; }
+      
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const mapCodeToStatus = {
+        "1": { label: "Ready", className: "ready" },
+        "2": { label: "Progressing", className: "progressing" },
+        "3": { label: "Finish", className: "finish" },
+        "4": { label: "Give Up", className: "give-up" },
+      }
+      
+      const mapStatusToCode = {
+        "Ready": "1",
+        "Progressing": "2",
+        "Finish": "3",
+        "Give Up": "4",
+      }
+      
+      class TodoItem extends React.Component {
+        constructor(props){
+          super(props);
+          
+          this.state = props.data;
+          
+          this.handleUpdate = this.handleUpdate.bind( this );
+          this.handleSave = this.handleSave.bind( this );
+          this.handleDelete = this.handleDelete.bind( this );
+          
+          this.setValue = this.setValue.bind( this );
+        }
+        
+        setValue( event ){
+          const name = event.target.name;
+          const value = event.target.value; 
+          
+          this.setState( state => Object.assign({}, state, {
+            [name]: value
+          }));
+        }
+        
+        handleUpdate( event ){
+          event.preventDefault();
+          
+          this.setState( state => Object.assign({}, state, {
+            mode: "write"
+          }));
+        }
+        
+        handleSave( event ){
+          event.preventDefault();
+          
+          this.props.onSave( event, this.state );
+        }
+        
+        handleDelete( event ){
+          event.preventDefault();
+          this.props.onDelete( event, this.state );
+        }
+        
+        render(){
+          
+          const disabled = this.state.mode === "read";
+          const status = mapCodeToStatus[this.state.status];
+          const options = Object.keys( mapStatusToCode ).map( label =>({
+            label: label,
+            value: mapStatusToCode[label]
+          }));    
+        
+          return (
+            <ol className={ ["todo-item", status.className].join(" ") }>
+              <form>
+                <input className="todo-item-input w1" name="no" value={ this.state.no } disabled />
+                <input className="todo-item-input w2" name="cate" value={ this.state.cate } onChange={ this.setValue } disabled={ disabled } />
+                <input className="todo-item-input w5" name="desc" value={ this.state.desc } onChange={ this.setValue } disabled={ disabled } />
+                <select className="todo-item-input w2" name="status" onChange={ this.setValue } disabled={ disabled } >
+                {
+                  options.map(({ label, value })=>(
+                    <option value={ value } selected={ value == String(this.state.status) }>{ label }</option>
+                  ))
+                }
+                </select>
+                <div className={ ["right", "w2"].join(" ") }>
+                  {
+                    this.state.mode === "read"
+                    ? <button type="submit" className="w6" onClick={ this.handleUpdate }>Update</button>
+                    : <button type="submit" className="w6" onClick={ this.handleSave }>Save</button>
+                  }
+                  <button className={ ["center", "w2"].join(" ") } onClick={ this.handleDelete }>X</button>
+                </div>
+              </form>
+            </ol>
+          );
+        }
+      }
+    </script>
+    <script type="text/babel">
+      const sampleList = [
+        { no: 1, mode: "read", cate: "study", desc: "test data1", status: "1" },
+        { no: 2, mode: "read", cate: "study", desc: "test data2", status: "2" },
+        { no: 3, mode: "read", cate: "working", desc: "test data3", status: "3" },
+        { no: 4, mode: "read", cate: "working", desc: "test data4", status: "4" },
+      ];
+    
+      class TodoApp extends React.Component {
+        constructor(props){
+          super(props);
+          
+          this.state = {
+            mode: "read",
+            first: 0,
+            last: 0,
+            size: 0,
+            list: [],
+          }
+          
+          this.handleAdd = this.handleAdd.bind( this );
+          this.handleSave = this.handleSave.bind( this );
+          this.handleDelete = this.handleDelete.bind( this );
+          
+          this.getPageInfo = this.getPageInfo.bind( this );
+        }
+        
+        componentDidMount(){
+          const pageInfo = this.getPageInfo( sampleList );
+        
+          this.setState( state => Object.assign({}, state, {
+            list: sampleList,
+            ...pageInfo
+          }));
+        }
+        
+        getPageInfo( list ){
+          list = list || this.state.list;
+        
+          let first = 0;
+          let last = 0;
+          let size = list.length;
+          
+          if( list.length > 1 ){        
+            first = list.reduce(( prev, crnt )=>( prev.no < crnt.no ? prev : crnt )).no;
+            last = list.reduce(( prev, crnt )=>( prev.no > crnt.no ? prev : crnt )).no;          
+          } else if ( list.length == 1 ){
+            last = first = list[0].no;            
+          }
+          
+          return { first, last, size };
+        }
+        
+        handleAdd( event ){
+          if( this.state.mode === "read" ){
+            this.setState( state => Object.assign({}, state, {
+              mode: "write",
+              last: state.last+1,
+              list: [{
+                no: state.last+1,
+                mode: "write",
+                cate: "",
+                desc: "",
+                status: "1"
+              }].concat( state.list )
+            }));
+          }
+        }
+        
+        handleSave( event, data ){
+          this.setState( state => Object.assign({}, state, {
+            mode: "read",
+            list: state.list.map( item => {
+              item.mode = "read";
+              data.mode = "read";
+            
+              if( item.no == data.no ){
+                return data;
+              }
+              return item;
+            })
+          }));
+        }
+        
+        handleDelete( event, data ){
+          const prevMode = this.state.mode;
+          const nextMode = prevMode === "write" && this.state.last === data.no ? "read" : prevMode;
+          
+          const deletedList = this.state.list.filter( item => item.no != data.no );
+          const pageInfo = this.getPageInfo( deletedList );
+          
+          this.setState( state => Object.assign({}, state, {
+            mode: nextMode,
+            list: deletedList,
+            ...pageInfo
+          }));
+        }
+        
+        render(){
+          return (
+            <React.Fragment>
+              <div>
+                <h2>TodoApp</h2>
+                <button onClick={ this.handleAdd }>+</button>
+              </div>
+              <ul className="todo-list">
+              {
+                this.state.list.map(( data )=>(
+                  <TodoItem 
+                    key={ data.no } 
+                    data={ data }
+                    onSave={ this.handleSave }
+                    onDelete={ this.handleDelete }
+                  />
+                ))
+              }
+              </ul>
+            </React.Fragment>
+          );
+        }
+      }
+    </script>
+    <script type="text/babel">
+      class App extends React.Component {
+        render() {
+          return (
+            <React.Fragment>
+              <h1>Hello world!</h1>
+              <div>
+                <TodoApp />
+              </div>
+            </React.Fragment>
+          )
+        }
+      }
+      ReactDOM.render(<App />, document.getElementById('root'))
+    </script>
+  </body>
+</html>
